@@ -20,4 +20,4 @@ git clone https://github.com/zhthinkjoy/ZHThinkjoyFace_Android_SDK.git
 如果点击jar包，可以看见包里面的内容，可以直接编译运行。否则，右键点击ZHTJface_v1.0.jar，选择add as library
 
 ## api的使用
-人脸识别具体api使用使用请看[说明文档](https://github.com/zhthinkjoy/ZHThinkjoyFace_Android_SDK/wiki)
+人脸识别具体api使用使用请看[说明文档](https://dev.zhthinkjoy.com/APIFile/faceOffApi/Android)
