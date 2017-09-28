@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.thinkjoy.zhthinkjoyfacedetect.MainActivity">
+<com.thinkjoy.zhthinkjoyfacedetect.CameraPreview
+    android:id="@+id/cv_camera_preview"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content" />
+    <com.thinkjoy.zhthinkjoyfacedetect.FaceOverlayView
+        android:id="@+id/fv_draw_rect"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+    <Button
+        android:text="添加人脸"
+        android:id="@+id/bt_add_face"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+</FrameLayout>
