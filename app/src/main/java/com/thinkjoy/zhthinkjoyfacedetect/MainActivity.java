@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
@@ -29,6 +30,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
     private Handler faceAddHandler;
     private CameraPreview cameraPreview;
     private FaceDataManager faceDataManager;
+    private Boolean isActivityPause = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,22 +51,28 @@ public class MainActivity extends Activity implements View.OnClickListener{
             @Override
             public void handleMessage(Message msg) {
                 super.handleMessage(msg);
+                if (isActivityPause == true) {
+                    return;
+                }
                 switch (msg.what) {
                     case GlobalInfo.MSG_ADD_FACE:
                         FaceInfo faceInfo = (FaceInfo)msg.obj;
                         String path1 = faceInfo.getPath1();
                         String path2 = faceInfo.getPath2();
                         String name = faceInfo.getName();
-                        Bitmap bitmap1 = BitmapFactory.decodeFile(path1);
-                        Bitmap bitmap2 = BitmapFactory.decodeFile(path2);
                         List<FaceRectangle> faceIndexList = new ArrayList<>();
                         List<FaceLandMark> faceKeyPointList = new ArrayList<>();
                         List<FaceFeature> faceFeatureList = new ArrayList<>();
+                        Bitmap bitmap1 = BitmapFactory.decodeFile(path1);
                         zhThinkjoyFace.faceDetectAndFeatureExtract(bitmap1, faceIndexList, faceKeyPointList, faceFeatureList);
+                        bitmap1.recycle();
+                        Bitmap bitmap2 = BitmapFactory.decodeFile(path2);
                         zhThinkjoyFace.faceDetectAndFeatureExtract(bitmap2, faceIndexList, faceKeyPointList, faceFeatureList);
+                        bitmap2.recycle();
                         for (int i = 0; i < faceFeatureList.size(); ++i) {
-                            faceDataManager.addFace(name, faceFeatureList.get(i));
+                                faceDataManager.addFace(name, faceFeatureList.get(i));
                         }
+
                         break;
                 }
             }
@@ -74,27 +82,42 @@ public class MainActivity extends Activity implements View.OnClickListener{
             @Override
             public void handleMessage(Message msg) {
                 super.handleMessage(msg);
+                if (isActivityPause == true) {
+                    globalFlag.isFaceDetectFinished = true;
+                    return;
+                }
                 switch (msg.what) {
+
                     case GlobalInfo.MSG_FACE_TEST:
                         Bitmap bitmap3 = (Bitmap)msg.obj;
                         List<FaceRectangle> faceRectangleList = new ArrayList<>();
                         List<FaceLandMark> faceLandMarkList = new ArrayList<>();
                         List<FaceFeature> faceFeatureList = new ArrayList<>();
                         long time1 = System.currentTimeMillis();
+                        if (isActivityPause == true) {
+                            globalFlag.isFaceDetectFinished = true;
+                            return;
+                        }
                         zhThinkjoyFace.faceDetect(bitmap3, faceRectangleList, faceLandMarkList);
                         long time2 = System.currentTimeMillis();
+                        if (isActivityPause == true) {
+                            globalFlag.isFaceDetectFinished = true;
+                            return;
+                        }
                         zhThinkjoyFace.featureExtract(bitmap3, faceLandMarkList, faceFeatureList);
                         long time3 = System.currentTimeMillis();
                         List<double[]> simProbList = new ArrayList<>();
                         if (faceRectangleList.size() > 0) {
                             for (int i = 0; i < faceRectangleList.size(); ++i) {
                                 double[] simprobs = zhThinkjoyFace.featureCompare(faceFeatureList.get(i), faceDataManager.mFaceFeatureList);
-                                simProbList.add(simprobs);
+                                    simProbList.add(simprobs);
                             }
                             fv_draw_rect.setFaceDetectResult(faceRectangleList, faceLandMarkList, time2 - time1, time3 - time2, simProbList);
+                            if (isActivityPause == false)
                                 fv_draw_rect.postInvalidate();
                         } else {
                             fv_draw_rect.setFaceDetectResult(faceRectangleList, faceLandMarkList, time2 - time1, time3 - time2);
+                            if (isActivityPause == false)
                             fv_draw_rect.postInvalidate();
                         }
                         globalFlag.isFaceDetectFinished = true;
@@ -137,6 +160,13 @@ public class MainActivity extends Activity implements View.OnClickListener{
     @Override
     protected  void onPause() {
         super.onPause();
+        isActivityPause = true;
+    }
+
+    @Override
+    protected  void onResume() {
+        super.onResume();
+        isActivityPause = false;
     }
 
 }

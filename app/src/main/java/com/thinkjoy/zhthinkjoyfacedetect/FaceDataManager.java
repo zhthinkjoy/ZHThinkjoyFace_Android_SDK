@@ -71,6 +71,9 @@ public class FaceDataManager extends SQLiteOpenHelper {
                 mFaceFeatureList.add(faceFeature);
             } while (c.moveToNext());
         }
+//        for (int i = 0; i < 400; ++i) {
+//            mFaceFeatureList.add(mFaceFeatureList.get(0));
+//        }
     }
     public void insertMember(String name, FaceFeature faceFeature) {
         byte[] bytes = floatArrayToByteArray(faceFeature.features);

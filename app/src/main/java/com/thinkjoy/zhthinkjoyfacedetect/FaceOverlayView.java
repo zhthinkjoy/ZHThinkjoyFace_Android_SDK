@@ -100,7 +100,7 @@ public class FaceOverlayView extends View {
                             max_index = j;
                         }
                     }
-                    canvas.drawText("name: " + faceDataManager.mFaceNameList.get(max_index) + " " + "simProb:" + " " + Double.toString(simProbListSave.get(i)[max_index]), right, top + (max_index + 1) * 30, mTextPaint);
+                    canvas.drawText("name: " + faceDataManager.mFaceNameList.get(max_index) + " " + "simProb:" + " " + Double.toString(simProbListSave.get(i)[max_index]), right, top + (0 + 1) * 30, mTextPaint);
                 }
             }
 

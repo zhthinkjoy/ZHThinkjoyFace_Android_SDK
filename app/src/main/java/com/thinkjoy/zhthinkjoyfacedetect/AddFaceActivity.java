@@ -98,16 +98,32 @@ public class AddFaceActivity extends Activity implements View.OnClickListener{
             Bitmap bitmap = BitmapFactory.decodeFile(picturePath);
             cursor.close();
             if (requestCode == RESULT_LOAD_IMAGE1) {
+                if (photo1 != null) {
+                    photo1.recycle();
+                }
                 photo1 = bitmap;
                 pathPhoto1 = picturePath;
                 iv_member_photo1.setImageBitmap(bitmap);
                 isPhoto1Choose = true;
             } else if (requestCode == RESULT_LOAD_IMAGE2) {
+                if (photo2 != null) {
+                    photo2.recycle();
+                }
                 photo2 = bitmap;
                 pathPhoto2 = picturePath;
                 iv_member_photo2.setImageBitmap(bitmap);
                 isPhoto2Choose = true;
             }
+        }
+    }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (photo1 != null) {
+            photo1.recycle();
+        }
+        if (photo2 != null) {
+            photo2.recycle();
         }
     }
 }
