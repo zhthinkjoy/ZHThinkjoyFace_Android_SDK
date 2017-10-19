@@ -31,6 +31,9 @@ public class MainActivity extends Activity implements View.OnClickListener{
     private CameraPreview cameraPreview;
     private FaceDataManager faceDataManager;
     private Boolean isActivityPause = false;
+    static {
+        System.loadLibrary("face");
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,9 +54,6 @@ public class MainActivity extends Activity implements View.OnClickListener{
             @Override
             public void handleMessage(Message msg) {
                 super.handleMessage(msg);
-                if (isActivityPause == true) {
-                    return;
-                }
                 switch (msg.what) {
                     case GlobalInfo.MSG_ADD_FACE:
                         FaceInfo faceInfo = (FaceInfo)msg.obj;
@@ -72,7 +72,6 @@ public class MainActivity extends Activity implements View.OnClickListener{
                         for (int i = 0; i < faceFeatureList.size(); ++i) {
                                 faceDataManager.addFace(name, faceFeatureList.get(i));
                         }
-
                         break;
                 }
             }
