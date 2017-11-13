@@ -6,12 +6,16 @@ android {
     compileSdkVersion 26
     buildToolsVersion "26.0.0"
     defaultConfig {
-        applicationId "com.thinkjoy.zhthinkjoyfacedetect3_3"
+        applicationId "com.thinkjoy.zhthinkjoyfacedetect2"
         minSdkVersion 14
         targetSdkVersion 26
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters "armeabi-v7a"
+        }
+
     }
     buildTypes {
         release {
@@ -37,5 +41,5 @@ dependencies {
     compile 'com.android.support:appcompat-v7:26.+'
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
     testCompile 'junit:junit:4.12'
-    compile files('libs/ZHTJface_V1.0.jar')
+    compile files('libs/ZHTJFace_V1.1.jar')
 }

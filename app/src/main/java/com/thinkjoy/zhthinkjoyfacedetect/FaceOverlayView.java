@@ -5,9 +5,11 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 
 
+import com.thinkjoy.zhthinkjoyfacedetectlib.FaceConfig;
 import com.thinkjoy.zhthinkjoyfacedetectlib.FaceLandMark;
 import com.thinkjoy.zhthinkjoyfacedetectlib.FaceRectangle;
 
@@ -85,22 +87,38 @@ public class FaceOverlayView extends View {
         canvas.drawText("ExtractTime: " + Long.toString(extractTime) + "ms", 0, 250, mTextPaint);
         faceRectangleListSave = faceRectangleList;
         if (faceRectangleListSave != null) {
-            int left, right, top, bottom;
+            float left, right, top, bottom;
             for (int i = 0; i < faceRectangleListSave.size(); ++i) {
                 top = (int) (faceRectangleListSave.get(i).faceRectangle[0].y * winHeight / imageHeight + 0.5);
-                left = winWidth - (int) (faceRectangleListSave.get(i).faceRectangle[0].x * winWidth  / imageWidth+ 0.5);
-                bottom = (int) (faceRectangleListSave.get(i).faceRectangle[1].y * winHeight / imageHeight+ 0.5);
-                right = winWidth - (int) (faceRectangleListSave.get(i).faceRectangle[1].x * winWidth / imageWidth+ 0.5);
+                bottom = (int) (faceRectangleListSave.get(i).faceRectangle[1].y * winHeight / imageHeight + 0.5);
+                float x1 = faceRectangleListSave.get(i).faceRectangle[0].x;
+                float y1 = faceRectangleListSave.get(i).faceRectangle[0].y;
+                float x2 = faceRectangleListSave.get(i).faceRectangle[1].x;
+                float y2 = faceRectangleListSave.get(i).faceRectangle[1].y;
+//                float left = (imageWidth - y1) * winHeight / imageWidth;
+//                float top = x1 * winHeight / imageHeight;
+//                float right = (imageWidth - y2) * winWidth / imageWidth;
+//                float bottom = x2 * winHeight / imageHeight;
+                if (GlobalInfo.IS_PREVIEW_REVERSE == true) {
+                    right = (int) (faceRectangleListSave.get(i).faceRectangle[0].x * winWidth  / imageWidth+ 0.5);
+                    left = (int) (faceRectangleListSave.get(i).faceRectangle[1].x * winWidth / imageWidth+ 0.5);
+
+
+                } else {
+                    left = winWidth - (int) (faceRectangleListSave.get(i).faceRectangle[0].x * winWidth / imageWidth + 0.5);
+                    right = winWidth - (int) (faceRectangleListSave.get(i).faceRectangle[1].x * winWidth / imageWidth + 0.5);
+                }
+                Log.i("FaceDetect", "right:" + faceRectangleListSave.get(i).faceRectangle[1].x + " left:" + faceRectangleListSave.get(i).faceRectangle[0].x + " bottom:" + faceRectangleListSave.get(i).faceRectangle[1].y + " top:" + faceRectangleListSave.get(i).faceRectangle[0].y);
                 canvas.drawRect(right, top, left, bottom, mFacePaint);
                 simProbListSave = simProbList;
-                if (simProbListSave.size() > i && faceDataManager.mFaceFeatureList.size() > 0) {
+                if (simProbListSave != null && simProbListSave.size() > i && faceDataManager.mFaceFeatureList.size() > 0) {
                     int max_index = 0;
                     for (int j = 1; j < simProbListSave.get(i).length; ++j) {
                         if (simProbListSave.get(i)[max_index] < simProbListSave.get(i)[j]) {
                             max_index = j;
                         }
                     }
-                    canvas.drawText("name: " + faceDataManager.mFaceNameList.get(max_index) + " " + "simProb:" + " " + Double.toString(simProbListSave.get(i)[max_index]), right, top + (0 + 1) * 30, mTextPaint);
+                    canvas.drawText("name: " + faceDataManager.mFaceNameList.get(max_index) + " " + "simProb:" + " " + Double.toString(simProbListSave.get(i)[max_index]), right, top + (max_index + 1) * 30, mTextPaint);
                 }
             }
 
@@ -110,8 +128,19 @@ public class FaceOverlayView extends View {
         if (faceLandMarkListSave != null) {
             for (int i= 0; i < faceLandMarkListSave.size(); ++i) {
                 for (int j = 0; j < 5; ++j) {
-                    int x1 = winWidth - (int)(faceLandMarkListSave.get(i).faceLandMark[j].x * winWidth / imageWidth);
-                    int y1 = (int)(faceLandMarkListSave.get(i).faceLandMark[j].y * winHeight / imageHeight);
+                    float x1;
+                    if (GlobalInfo.IS_PREVIEW_REVERSE == false
+                            ) {
+                        x1 = winWidth -  (int) (faceLandMarkListSave.get(i).faceLandMark[j].x * winWidth / imageWidth);
+                    } else {
+                        x1 = (int) (faceLandMarkListSave.get(i).faceLandMark[j].x * winWidth / imageWidth);
+
+                    }
+//                    x1 = faceLandMarkListSave.get(i).faceLandMark[j].x;
+                    float y1 = faceLandMarkListSave.get(i).faceLandMark[j].y * winHeight / imageHeight;
+
+                    float x = (imageWidth - y1) * winWidth / imageWidth;
+                    float y = winHeight - x1 * winHeight / imageHeight;
                     canvas.drawPoint(x1, y1, mPaint);
                 }
             }
@@ -123,6 +152,11 @@ public class FaceOverlayView extends View {
     public void setWindowSize() {
         this.winHeight = this.getHeight();
         this.winWidth = this.getWidth();
+    }
+
+    public void setImageSize(int imageWidth, int imageHeight) {
+        this.imageWidth = imageWidth;
+        this.imageHeight = imageHeight;
     }
 
 

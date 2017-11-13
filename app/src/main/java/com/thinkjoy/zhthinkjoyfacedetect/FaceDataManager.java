@@ -67,16 +67,13 @@ public class FaceDataManager extends SQLiteOpenHelper {
                 String name = c.getString(c.getColumnIndex("member_name"));
                 byte[] member_features = c.getBlob(c.getColumnIndex("member_feature"));
                 mFaceNameList.add(name);
-                FaceFeature faceFeature = new FaceFeature(byteArrayToFloatArray(member_features));
+                FaceFeature faceFeature = new FaceFeature(member_features);
                 mFaceFeatureList.add(faceFeature);
             } while (c.moveToNext());
         }
-//        for (int i = 0; i < 400; ++i) {
-//            mFaceFeatureList.add(mFaceFeatureList.get(0));
-//        }
     }
     public void insertMember(String name, FaceFeature faceFeature) {
-        byte[] bytes = floatArrayToByteArray(faceFeature.features);
+        byte[] bytes = faceFeature.faceFeatures;
         sqLiteDatabase.beginTransaction();
         sqLiteDatabase.execSQL("INSERT INTO " + TABLE_PERSON_NAME +
         " VALUES(null, ?, ?)", new Object[] {

@@ -36,7 +36,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     SurfaceHolder surfaceHolder ;
     private Handler handler;
     private Camera camera ;
-    private ZHThinkjoyFace zhThinkjoyFace;
     private GlobalFlag globalFlag;
 
     public CameraPreview(Context context, AttributeSet attrs) {
@@ -44,8 +43,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         surfaceHolder = getHolder();
         surfaceHolder.addCallback(this);
         surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-        zhThinkjoyFace = ZHThinkjoyFace.getInstance(getContext());
-        zhThinkjoyFace.init();
         globalFlag = GlobalFlag.getInstance();
     }
 
@@ -56,6 +53,9 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             List<Camera.Size> sizeList = camera.getParameters().getSupportedPictureSizes();
             int selectNum = -1;
             int i = 0;
+            for (i = 0; i < sizeList.size(); ++i) {
+                Log.i("camerasize", "width:" + sizeList.get(i).width + " height:" + sizeList.get(i).height);
+            }
             for (i = 0; i < sizeList.size(); ++i) {
                 if (sizeList.get(i).width == GlobalInfo.CAMERA_SIZE) {
                     selectNum = i;
@@ -97,8 +97,12 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
             camera.setPreviewDisplay(holder);
             camera.setDisplayOrientation(90);
+//            camera.setDisplayOrientation(180);
             camera.setPreviewCallback(this);
             camera.startPreview() ;
+
+            globalFlag.imageWidth = size.width;
+            globalFlag.imageHeight = size.height;
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -121,32 +125,40 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     }
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
+        Camera.Size previewSize = camera.getParameters().getPreviewSize();
 
-        if (handler != null ) {
-            Camera.Size previewSize = camera.getParameters().getPreviewSize();
-            BitmapFactory.Options newOpts = new BitmapFactory.Options();
-            newOpts.inJustDecodeBounds = true;
-            YuvImage yuvimage = new YuvImage(
-                    data,
-                    ImageFormat.NV21,
-                    previewSize.width,
-                    previewSize.height,
-                    null);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            yuvimage.compressToJpeg(new Rect(0, 0, previewSize.width, previewSize.height), 100, baos);// 80--JPG图片的质量[0-100],100最高
-            byte[] rawImage = baos.toByteArray();
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-            Bitmap bitmapRaw = BitmapFactory.decodeByteArray(rawImage, 0, rawImage.length, options);
-            Bitmap bitmap = PhotoUtils.resizeBitmapAndRotate90(bitmapRaw, GlobalInfo.IMAGE_WIDTH, GlobalInfo.IMAGE_HEIGHT);
-            if (bitmap != null && (globalFlag.isFaceDetectFinished == true)) {
-                    Message msg = new Message();
-                    msg.what = GlobalInfo.MSG_FACE_TEST;
-                    msg.obj = bitmap;
-                    handler.sendMessage(msg);
-                globalFlag.isFaceDetectFinished = false;
+            synchronized (globalFlag.faceFramList) {
+                globalFlag.faceFramList.addLast(data);
+                if (globalFlag.faceFramList.size() >= 3) {
+                    globalFlag.faceFramList.removeFirst();
+                }
+                globalFlag.faceFramList.notify();
+                Log.i("FaceThread", "do notify");
+                Log.i("OnPreviewFram", "height:"  + previewSize.height + " width:" + previewSize.width);
             }
-        }
+//            BitmapFactory.Options newOpts = new BitmapFactory.Options();
+//            newOpts.inJustDecodeBounds = true;
+//            YuvImage yuvimage = new YuvImage(
+//                    data,
+//                    ImageFormat.NV21,
+//                    previewSize.width,
+//                    previewSize.height,
+//                    null);
+//            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//            yuvimage.compressToJpeg(new Rect(0, 0, previewSize.width, previewSize.height), 100, baos);// 80--JPG图片的质量[0-100],100最高
+//            byte[] rawImage = baos.toByteArray();
+//            BitmapFactory.Options options = new BitmapFactory.Options();
+//            options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+//            Bitmap bitmapRaw = BitmapFactory.decodeByteArray(rawImage, 0, rawImage.length, options);
+//            Bitmap bitmap = PhotoUtils.resizeBitmapAndRotate90(bitmapRaw, GlobalInfo.IMAGE_WIDTH, GlobalInfo.IMAGE_HEIGHT);
+//            if (bitmap != null && (globalFlag.isFaceDetectFinished == true)) {
+//                    Message msg = new Message();
+//                    msg.what = GlobalInfo.MSG_FACE_TEST;
+//                    msg.obj = bitmap;
+//                    handler.sendMessage(msg);
+//                globalFlag.isFaceDetectFinished = false;
+//            }
+
     }
     public void setHandler(Handler handler) {
         this.handler = handler;

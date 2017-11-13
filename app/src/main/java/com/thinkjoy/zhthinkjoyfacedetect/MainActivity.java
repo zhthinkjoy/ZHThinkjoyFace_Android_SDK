@@ -13,6 +13,7 @@ import android.view.View;
 import android.widget.Button;
 
 
+import com.thinkjoy.zhthinkjoyfacedetectlib.FaceConfig;
 import com.thinkjoy.zhthinkjoyfacedetectlib.FaceFeature;
 import com.thinkjoy.zhthinkjoyfacedetectlib.FaceLandMark;
 import com.thinkjoy.zhthinkjoyfacedetectlib.FaceRectangle;
@@ -30,7 +31,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
     private Handler faceAddHandler;
     private CameraPreview cameraPreview;
     private FaceDataManager faceDataManager;
-    private Boolean isActivityPause = false;
+
     static {
         System.loadLibrary("face");
     }
@@ -39,6 +40,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         zhThinkjoyFace = ZHThinkjoyFace.getInstance(this);
+        zhThinkjoyFace.init();
         globalFlag = GlobalFlag.getInstance();
         cameraPreview = (CameraPreview) findViewById(R.id.cv_camera_preview);
         fv_draw_rect = (FaceOverlayView) findViewById(R.id.fv_draw_rect);
@@ -64,68 +66,82 @@ public class MainActivity extends Activity implements View.OnClickListener{
                         List<FaceLandMark> faceKeyPointList = new ArrayList<>();
                         List<FaceFeature> faceFeatureList = new ArrayList<>();
                         Bitmap bitmap1 = BitmapFactory.decodeFile(path1);
-                        zhThinkjoyFace.faceDetectAndFeatureExtract(bitmap1, faceIndexList, faceKeyPointList, faceFeatureList);
-                        bitmap1.recycle();
-                        Bitmap bitmap2 = BitmapFactory.decodeFile(path2);
-                        zhThinkjoyFace.faceDetectAndFeatureExtract(bitmap2, faceIndexList, faceKeyPointList, faceFeatureList);
-                        bitmap2.recycle();
-                        for (int i = 0; i < faceFeatureList.size(); ++i) {
-                                faceDataManager.addFace(name, faceFeatureList.get(i));
+                        if (bitmap1 != null) {
+                            zhThinkjoyFace.faceDetectAndFeatureExtract(bitmap1, faceIndexList, faceKeyPointList, faceFeatureList);
+                            bitmap1.recycle();
+                            bitmap1 = null;
                         }
+                        Bitmap bitmap2 = BitmapFactory.decodeFile(path2);
+                        if (bitmap2 != null) {
+                            zhThinkjoyFace.faceDetectAndFeatureExtract(bitmap2, faceIndexList, faceKeyPointList, faceFeatureList);
+                            bitmap2.recycle();
+                            bitmap2 = null;
+                        }
+                        for (int i = 0; i < faceFeatureList.size(); ++i) {
+                            faceDataManager.addFace(name, faceFeatureList.get(i));
+                        }
+
                         break;
                 }
             }
         };
-
-        handler = new Handler(handlerThread.getLooper()) {
+        new Thread() {
             @Override
-            public void handleMessage(Message msg) {
-                super.handleMessage(msg);
-                if (isActivityPause == true) {
-                    globalFlag.isFaceDetectFinished = true;
-                    return;
-                }
-                switch (msg.what) {
+            public void run() {
+                while (true) {
+                    byte[] imageArray = null;
+                    int imageWidth = 0;
+                    int imageHeight = 0;
+                    Log.i("FaceThread", "do thread");
 
-                    case GlobalInfo.MSG_FACE_TEST:
-                        Bitmap bitmap3 = (Bitmap)msg.obj;
+                    synchronized (globalFlag.faceFramList) {
+                        if (globalFlag.faceFramList.size() <= 0) {
+                            try {
+                                globalFlag.faceFramList.wait();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        if (globalFlag.faceFramList.size() > 0) {
+                            imageArray = globalFlag.faceFramList.removeFirst();
+                            imageWidth = globalFlag.imageWidth;
+                            imageHeight = globalFlag.imageHeight;
+                        }
+                    }
+
+                    if (imageArray != null) {
                         List<FaceRectangle> faceRectangleList = new ArrayList<>();
                         List<FaceLandMark> faceLandMarkList = new ArrayList<>();
                         List<FaceFeature> faceFeatureList = new ArrayList<>();
                         long time1 = System.currentTimeMillis();
-                        if (isActivityPause == true) {
-                            globalFlag.isFaceDetectFinished = true;
-                            return;
-                        }
-                        zhThinkjoyFace.faceDetect(bitmap3, faceRectangleList, faceLandMarkList);
+                        FaceConfig faceDetectConfig = zhThinkjoyFace.getConfig();
+                        faceDetectConfig.Rotation = FaceConfig.ROTATE_270;
+                        faceDetectConfig.ResultMode = FaceConfig.RESULT_MODE_ROTATE;
+                        zhThinkjoyFace.setConfig(faceDetectConfig);
+                        zhThinkjoyFace.faceDetect(imageArray, ZHThinkjoyFace.IMAGE_FORMAT_NV21, imageWidth, imageHeight, faceRectangleList, faceLandMarkList);
+//                        zhThinkjoyFace.faceDetect(bitmap3, faceRectangleList, faceLandMarkList);
                         long time2 = System.currentTimeMillis();
-                        if (isActivityPause == true) {
-                            globalFlag.isFaceDetectFinished = true;
-                            return;
+                        if (faceRectangleList.size() > 0) {
+                            zhThinkjoyFace.featureExtract(imageArray, ZHThinkjoyFace.IMAGE_FORMAT_NV21, imageWidth, imageHeight, faceLandMarkList, faceFeatureList);
                         }
-                        zhThinkjoyFace.featureExtract(bitmap3, faceLandMarkList, faceFeatureList);
                         long time3 = System.currentTimeMillis();
                         List<double[]> simProbList = new ArrayList<>();
-                        if (faceRectangleList.size() > 0) {
+
+                        if (faceFeatureList.size() > 0) {
                             for (int i = 0; i < faceRectangleList.size(); ++i) {
                                 double[] simprobs = zhThinkjoyFace.featureCompare(faceFeatureList.get(i), faceDataManager.mFaceFeatureList);
-                                    simProbList.add(simprobs);
+                                simProbList.add(simprobs);
                             }
                             fv_draw_rect.setFaceDetectResult(faceRectangleList, faceLandMarkList, time2 - time1, time3 - time2, simProbList);
-                            if (isActivityPause == false)
-                                fv_draw_rect.postInvalidate();
+                            fv_draw_rect.postInvalidate();
                         } else {
                             fv_draw_rect.setFaceDetectResult(faceRectangleList, faceLandMarkList, time2 - time1, time3 - time2);
-                            if (isActivityPause == false)
                             fv_draw_rect.postInvalidate();
                         }
-                        globalFlag.isFaceDetectFinished = true;
-                        break;
+                    }
                 }
             }
-
-        };
-        cameraPreview.setHandler(handler);
+        }.start();
 
     }
 
@@ -146,7 +162,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
             {
                 Bundle bundle=data.getExtras();
                 String name = bundle.getString("name");
-                String str1 =bundle.getString("photo1");
+                String str1 = bundle.getString("photo1");
                 String str2 = bundle.getString("photo2");
                 FaceInfo faceInfo = new FaceInfo(name, str1, str2);
                 Message msg = new Message();
@@ -159,13 +175,6 @@ public class MainActivity extends Activity implements View.OnClickListener{
     @Override
     protected  void onPause() {
         super.onPause();
-        isActivityPause = true;
-    }
-
-    @Override
-    protected  void onResume() {
-        super.onResume();
-        isActivityPause = false;
     }
 
 }
