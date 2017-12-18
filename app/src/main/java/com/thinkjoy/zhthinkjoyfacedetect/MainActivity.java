@@ -23,15 +23,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends Activity implements View.OnClickListener{
-    private Handler handler;
-    private Button bt_add_face;
-    private FaceOverlayView fv_draw_rect;
+    private Button mBtnAddFace;
+    private FaceOverlayView mFaceOverLayView;
     private ZHThinkjoyFace zhThinkjoyFace;
-    private GlobalFlag globalFlag;
-    private Handler faceAddHandler;
-    private CameraPreview cameraPreview;
+    private GlobalFlag mGlobalFlag;
+    private Handler mFaceAddHandler;
     private FaceDataManager faceDataManager;
 
+    private boolean mFaceAddFinished = true;
     static {
         System.loadLibrary("face");
     }
@@ -41,18 +40,17 @@ public class MainActivity extends Activity implements View.OnClickListener{
         setContentView(R.layout.activity_main);
         zhThinkjoyFace = ZHThinkjoyFace.getInstance(this);
         zhThinkjoyFace.init();
-        globalFlag = GlobalFlag.getInstance();
-        cameraPreview = (CameraPreview) findViewById(R.id.cv_camera_preview);
-        fv_draw_rect = (FaceOverlayView) findViewById(R.id.fv_draw_rect);
-        bt_add_face = (Button)findViewById(R.id.bt_add_face);
-        bt_add_face.setOnClickListener(this);
-        fv_draw_rect.setWindowSize();
+        mGlobalFlag = GlobalFlag.getInstance();
+        mFaceOverLayView = (FaceOverlayView) findViewById(R.id.fv_draw_rect);
+        mBtnAddFace = (Button)findViewById(R.id.bt_add_face);
+        mBtnAddFace.setOnClickListener(this);
+        mFaceOverLayView.setWindowSize();
         HandlerThread handlerThread = new HandlerThread("faceDetect");
         handlerThread.start();
         final HandlerThread faceAddThread = new HandlerThread("faceAdd");
         faceAddThread.start();
         faceDataManager = FaceDataManager.getInstance(this);
-        faceAddHandler = new Handler(faceAddThread.getLooper()) {
+        mFaceAddHandler = new Handler(faceAddThread.getLooper()) {
             @Override
             public void handleMessage(Message msg) {
                 super.handleMessage(msg);
@@ -66,6 +64,11 @@ public class MainActivity extends Activity implements View.OnClickListener{
                         List<FaceLandMark> faceKeyPointList = new ArrayList<>();
                         List<FaceFeature> faceFeatureList = new ArrayList<>();
                         Bitmap bitmap1 = BitmapFactory.decodeFile(path1);
+                        Log.i("addface", "test");
+                        FaceConfig faceDetectConfig = zhThinkjoyFace.getConfig();
+                        faceDetectConfig.Rotation = FaceConfig.ROTATE_0;
+                        faceDetectConfig.ResultMode = FaceConfig.RESULT_MODE_ROTATE;
+                        zhThinkjoyFace.setConfig(faceDetectConfig);
                         if (bitmap1 != null) {
                             zhThinkjoyFace.faceDetectAndFeatureExtract(bitmap1, faceIndexList, faceKeyPointList, faceFeatureList);
                             bitmap1.recycle();
@@ -79,8 +82,9 @@ public class MainActivity extends Activity implements View.OnClickListener{
                         }
                         for (int i = 0; i < faceFeatureList.size(); ++i) {
                             faceDataManager.addFace(name, faceFeatureList.get(i));
+                            Log.i("faceFeature", faceFeatureList.size() + " " );
                         }
-
+                        mFaceAddFinished = true;
                         break;
                 }
             }
@@ -89,23 +93,31 @@ public class MainActivity extends Activity implements View.OnClickListener{
             @Override
             public void run() {
                 while (true) {
+                    if (mFaceAddFinished == false) {
+                        try {
+                            sleep(10);
+                            continue;
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     byte[] imageArray = null;
                     int imageWidth = 0;
                     int imageHeight = 0;
                     Log.i("FaceThread", "do thread");
 
-                    synchronized (globalFlag.faceFramList) {
-                        if (globalFlag.faceFramList.size() <= 0) {
+                    synchronized (mGlobalFlag.faceFramList) {
+                        if (mGlobalFlag.faceFramList.size() <= 0) {
                             try {
-                                globalFlag.faceFramList.wait();
+                                mGlobalFlag.faceFramList.wait();
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }
                         }
-                        if (globalFlag.faceFramList.size() > 0) {
-                            imageArray = globalFlag.faceFramList.removeFirst();
-                            imageWidth = globalFlag.imageWidth;
-                            imageHeight = globalFlag.imageHeight;
+                        if (mGlobalFlag.faceFramList.size() > 0) {
+                            imageArray = mGlobalFlag.faceFramList.removeFirst();
+                            imageWidth = mGlobalFlag.imageWidth;
+                            imageHeight = mGlobalFlag.imageHeight;
                         }
                     }
 
@@ -132,11 +144,11 @@ public class MainActivity extends Activity implements View.OnClickListener{
                                 double[] simprobs = zhThinkjoyFace.featureCompare(faceFeatureList.get(i), faceDataManager.mFaceFeatureList);
                                 simProbList.add(simprobs);
                             }
-                            fv_draw_rect.setFaceDetectResult(faceRectangleList, faceLandMarkList, time2 - time1, time3 - time2, simProbList);
-                            fv_draw_rect.postInvalidate();
+                            mFaceOverLayView.setFaceDetectResult(faceRectangleList, faceLandMarkList, time2 - time1, time3 - time2, simProbList);
+                            mFaceOverLayView.postInvalidate();
                         } else {
-                            fv_draw_rect.setFaceDetectResult(faceRectangleList, faceLandMarkList, time2 - time1, time3 - time2);
-                            fv_draw_rect.postInvalidate();
+                            mFaceOverLayView.setFaceDetectResult(faceRectangleList, faceLandMarkList, time2 - time1, time3 - time2);
+                            mFaceOverLayView.postInvalidate();
                         }
                     }
                 }
@@ -168,7 +180,8 @@ public class MainActivity extends Activity implements View.OnClickListener{
                 Message msg = new Message();
                 msg.what = GlobalInfo.MSG_ADD_FACE;
                 msg.obj = faceInfo;
-                faceAddHandler.sendMessage(msg);
+                mFaceAddFinished = false;
+                mFaceAddHandler.sendMessage(msg);
             }
         }
     }

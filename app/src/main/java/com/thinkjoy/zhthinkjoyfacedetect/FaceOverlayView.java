@@ -103,7 +103,6 @@ public class FaceOverlayView extends View {
                     right = (int) (faceRectangleListSave.get(i).faceRectangle[0].x * winWidth  / imageWidth+ 0.5);
                     left = (int) (faceRectangleListSave.get(i).faceRectangle[1].x * winWidth / imageWidth+ 0.5);
 
-
                 } else {
                     left = winWidth - (int) (faceRectangleListSave.get(i).faceRectangle[0].x * winWidth / imageWidth + 0.5);
                     right = winWidth - (int) (faceRectangleListSave.get(i).faceRectangle[1].x * winWidth / imageWidth + 0.5);
